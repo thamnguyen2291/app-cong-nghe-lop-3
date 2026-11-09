@@ -1,0 +1,6 @@
+{
+  "name": "Mắt Sáng Chọn Hay",
+  "description": "Ứng dụng dạy học Công nghệ lớp 3: Sử dụng máy thu hình - Phân biệt thể loại kênh và chọn nội dung an toàn.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
