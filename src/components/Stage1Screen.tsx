@@ -35,16 +35,16 @@ export const Stage1Screen: React.FC<Stage1ScreenProps> = ({
   const currentCard = cards[currentCardIndex];
   const [hasAnswered, setHasAnswered] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<ProgramCategory | null>(null);
-  const [countdown, setCountdown] = useState<number>(30);
+  const [countdown, setCountdown] = useState<number>(20);
 
   // Reset state when currentCardIndex changes
   useEffect(() => {
     setHasAnswered(false);
     setSelectedCategory(null);
-    setCountdown(30);
+    setCountdown(20);
   }, [currentCardIndex]);
 
-  // 30-second timer countdown
+  // 20-second timer countdown
   useEffect(() => {
     if (hasAnswered || isPaused) return;
     if (countdown <= 0) return;
@@ -122,23 +122,25 @@ export const Stage1Screen: React.FC<Stage1ScreenProps> = ({
           </span>
         </div>
 
-        {/* 30-second Countdown */}
-        <div
-          className={`flex items-center gap-2 px-4 py-2 rounded-2xl border-2 font-mono font-bold text-lg sm:text-xl shadow-sm transition-colors ${
-            countdown === 0
-              ? "bg-amber-100 border-amber-400 text-amber-900"
-              : countdown <= 10
-              ? "bg-rose-100 border-rose-400 text-rose-800 animate-pulse"
-              : "bg-white border-[#5eead4] text-[#0f766e]"
-          }`}
-          aria-label="Thời gian thảo luận nhóm"
-        >
-          <Clock className="w-5 h-5" />
-          <span>{countdown > 0 ? `${countdown}s` : "Hết giờ giơ thẻ!"}</span>
-          <span className="text-xs font-sans text-gray-500 hidden md:inline">
-            {countdown > 0 ? "thảo luận" : "hãy bấm ngay"}
-          </span>
-        </div>
+        {/* 20-second Countdown: hidden after answering */}
+        {!hasAnswered && (
+          <div
+            className={`flex items-center gap-2 px-4 py-2 rounded-2xl border-2 font-mono font-bold text-lg sm:text-xl shadow-sm transition-colors ${
+              countdown === 0
+                ? "bg-amber-100 border-amber-400 text-amber-900"
+                : countdown <= 7
+                ? "bg-rose-100 border-rose-400 text-rose-800 animate-pulse"
+                : "bg-white border-[#5eead4] text-[#0f766e]"
+            }`}
+            aria-label="Thời gian thảo luận nhóm"
+          >
+            <Clock className="w-5 h-5" />
+            <span>{countdown > 0 ? `${countdown}s` : "Hết giờ giơ thẻ!"}</span>
+            <span className="text-xs font-sans text-gray-500 hidden md:inline">
+              {countdown > 0 ? "thảo luận" : "hãy bấm ngay"}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Main Workspace: Left is TV Chassis, Right is 3 Large Answer Buttons */}
