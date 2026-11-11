@@ -1,16 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import confetti from "canvas-confetti";
 import { soundManager } from "../utils/audio";
 import {
   Trophy,
   Star,
-  Sparkles,
   RotateCcw,
   BookOpen,
   AlertCircle,
   CheckCircle2,
   Brain,
-  Loader2,
   Flame,
 } from "lucide-react";
 
@@ -35,10 +33,6 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
   onPlayAgain,
   onBackToModeSelect,
 }) => {
-  const [aiComment, setAiComment] = useState<string | null>(null);
-  const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-
   const totalQuestions = stage1Total + stage2Total;
   const totalCorrect = stage1Correct + stage2Correct;
   const accuracyPercent =
@@ -58,6 +52,13 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
     summaryTitle = "Cả lớp đã hoàn thành nhiệm vụ!";
   }
 
+  const teacherRemark =
+    accuracyPercent >= 80
+      ? "Hôm nay các nhóm tương tác rất tích cực và biết phân biệt chính xác các thể loại chương trình ti vi. Các em hãy nhớ luôn chọn nội dung phù hợp lứa tuổi và xem cùng người lớn nhé!"
+      : accuracyPercent >= 50
+      ? "Cả lớp hôm nay đã rất cố gắng tham gia thảo luận và giơ thẻ sôi nổi. Các em hãy nhớ quy tắc vàng: chọn kênh đúng tuổi, xem cùng người lớn và báo ngay khi thấy điều lạ!"
+      : "Cả lớp đã rất nỗ lực cùng nhau tìm hiểu bài học. Các em nhớ ôn lại các thể loại chương trình và luôn hỏi ý kiến bố mẹ trước khi xem ti vi nhé!";
+
   useEffect(() => {
     soundManager.playFanfare();
     if (accuracyPercent >= 80) {
@@ -70,55 +71,6 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
       } catch {}
     }
   }, [accuracyPercent]);
-
-  const handleRequestAiComment = async () => {
-    soundManager.playClick();
-    setIsLoadingAi(true);
-    setAiError(null);
-
-    try {
-      const response = await fetch("/api/gemini", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "teacher-comment",
-          stage1Correct,
-          stage1Total,
-          stage2Correct,
-          stage2Total,
-          incorrectItems: incorrectCards,
-        }),
-      });
-
-      if (!response.ok) {
-        let errorDetail = `Mã phản hồi HTTP ${response.status}`;
-        try {
-          const errData = await response.json();
-          if (errData?.error) errorDetail = errData.error;
-        } catch {
-          // Không parse được json
-        }
-        throw new Error(errorDetail);
-      }
-
-      const data = await response.json();
-      if (data.nhan_xet) {
-        setAiComment(data.nhan_xet);
-      } else {
-        setAiComment(
-          "Cả lớp hôm nay tương tác rất sôi nổi và phân biệt chính xác các thể loại chương trình ti vi. Các em hãy nhớ luôn chọn nội dung phù hợp lứa tuổi và xem cùng người lớn nhé!"
-        );
-      }
-    } catch (err: any) {
-      console.error("[Tổng kết] Chi tiết lỗi khi gọi Gemini gợi ý nhận xét:", err);
-      setAiError("Chưa nhờ được Gemini. Cô có thể tự nhận xét cho lớp.");
-      setAiComment(
-        "Cả lớp hôm nay rất tích cực thảo luận và giơ thẻ trả lời chính xác. Các em hãy nhớ quy tắc vàng: chọn kênh đúng tuổi, xem cùng người lớn và báo ngay khi thấy điều lạ!"
-      );
-    } finally {
-      setIsLoadingAi(false);
-    }
-  };
 
   return (
     <main className="flex-1 w-full max-w-[1366px] mx-auto px-4 py-2 sm:py-4 flex flex-col justify-between">
@@ -221,7 +173,7 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
           </div>
         </div>
 
-        {/* Block 3: AI Teacher Comment Suggestion (3 cols) */}
+        {/* Block 3: Lời nhận xét tổng kết cho cô giáo (3 cols) */}
         <div className="md:col-span-3 bg-[#f0fdfa] rounded-3xl p-4 border-2 border-[#5eead4] shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2 text-[#0f766e] mb-2">
@@ -229,43 +181,20 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
               <h2 className="text-base font-black">Góc cô giáo nhận xét</h2>
             </div>
 
-            {aiComment ? (
-              <div className="bg-white border-2 border-[#99f6e4] rounded-2xl p-3 shadow-inner">
-                <span className="text-xs uppercase font-bold text-[#0d9488] block mb-1">
-                  Gợi ý 2 câu nhận xét cụ thể:
-                </span>
-                <p className="text-sm sm:text-base font-medium text-[#134e40] leading-snug">
-                  "{aiComment}"
-                </p>
-              </div>
-            ) : (
-              <p className="text-xs sm:text-sm text-[#115e59] leading-relaxed">
-                Bấm nút bên dưới để nhận gợi ý 2 câu nhận xét tích cực cho tiết dạy từ kết quả thực tế của lớp.
+            <div className="bg-white border-2 border-[#99f6e4] rounded-2xl p-3.5 shadow-inner">
+              <span className="text-xs uppercase font-bold text-[#0d9488] block mb-1">
+                Lời tuyên dương gợi ý cho cô đọc:
+              </span>
+              <p className="text-sm sm:text-base font-semibold text-[#134e40] leading-snug">
+                "{teacherRemark}"
               </p>
-            )}
-
-            {aiError && (
-              <p className="text-xs text-rose-600 font-medium mt-1.5">{aiError}</p>
-            )}
+            </div>
           </div>
 
-          <button
-            onClick={handleRequestAiComment}
-            disabled={isLoadingAi}
-            className="mt-3 w-full py-2.5 px-3 rounded-xl bg-white border-2 border-[#14b8a6] hover:bg-[#ccfbf1] text-[#0f766e] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer shadow-sm disabled:opacity-50"
-          >
-            {isLoadingAi ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-[#0d9488]" />
-                <span>Đang tạo gợi ý...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 text-[#0d9488]" />
-                <span>{aiComment ? "Tạo gợi ý khác" : "Gợi ý lời nhận xét"}</span>
-              </>
-            )}
-          </button>
+          <div className="mt-3 p-2.5 rounded-xl bg-teal-50 border border-teal-200 text-xs text-[#0f766e] font-semibold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0" />
+            <span>Cô giáo đọc lời nhận xét này để tổng kết và tuyên dương cả lớp.</span>
+          </div>
         </div>
       </div>
 
