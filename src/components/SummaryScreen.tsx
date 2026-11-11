@@ -77,10 +77,11 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
     setAiError(null);
 
     try {
-      const response = await fetch("/api/gemini/teacher-comment", {
+      const response = await fetch("/api/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "teacher-comment",
           stage1Correct,
           stage1Total,
           stage2Correct,
@@ -90,7 +91,14 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error("Lỗi kết nối");
+        let errorDetail = `Mã phản hồi HTTP ${response.status}`;
+        try {
+          const errData = await response.json();
+          if (errData?.error) errorDetail = errData.error;
+        } catch {
+          // Không parse được json
+        }
+        throw new Error(errorDetail);
       }
 
       const data = await response.json();
@@ -101,7 +109,8 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
           "Cả lớp hôm nay tương tác rất sôi nổi và phân biệt chính xác các thể loại chương trình ti vi. Các em hãy nhớ luôn chọn nội dung phù hợp lứa tuổi và xem cùng người lớn nhé!"
         );
       }
-    } catch {
+    } catch (err: any) {
+      console.error("[Tổng kết] Chi tiết lỗi khi gọi Gemini gợi ý nhận xét:", err);
       setAiError("Chưa nhờ được Gemini. Cô có thể tự nhận xét cho lớp.");
       setAiComment(
         "Cả lớp hôm nay rất tích cực thảo luận và giơ thẻ trả lời chính xác. Các em hãy nhớ quy tắc vàng: chọn kênh đúng tuổi, xem cùng người lớn và báo ngay khi thấy điều lạ!"

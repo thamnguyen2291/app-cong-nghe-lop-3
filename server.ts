@@ -9,19 +9,21 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-import { handleSuggestCard, handleTeacherComment } from "./api/_gemini.ts";
+import geminiHandler from "./api/gemini.ts";
 
-// Endpoint: AI gợi ý thẻ cho giáo viên
-app.post("/api/gemini/suggest-card", async (req, res) => {
-  const { programName } = req.body || {};
-  const result = await handleSuggestCard(programName);
-  res.status(result.status).json(result.data);
+// Endpoint Gemini chung (dùng cho cả local dev và tương đương Vercel)
+app.all("/api/gemini", async (req, res) => {
+  await geminiHandler(req, res);
 });
 
-// Endpoint: AI gợi ý lời nhận xét ở màn Tổng kết
+// Hỗ trợ đường dẫn cũ nếu có
+app.post("/api/gemini/suggest-card", async (req, res) => {
+  req.body = { ...req.body, action: "suggest-card" };
+  await geminiHandler(req, res);
+});
 app.post("/api/gemini/teacher-comment", async (req, res) => {
-  const result = await handleTeacherComment(req.body);
-  res.status(result.status).json(result.data);
+  req.body = { ...req.body, action: "teacher-comment" };
+  await geminiHandler(req, res);
 });
 
 async function startServer() {

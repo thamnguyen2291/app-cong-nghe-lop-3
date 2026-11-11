@@ -69,27 +69,38 @@ export const TeacherCornerModal: React.FC<TeacherCornerModalProps> = ({
     setFormFeedback(null);
 
     try {
-      const response = await fetch("/api/gemini/suggest-card", {
+      const response = await fetch("/api/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ programName: aiProgramQuery.trim() }),
+        body: JSON.stringify({
+          action: "suggest-card",
+          programName: aiProgramQuery.trim(),
+        }),
       });
 
       if (!response.ok) {
-        throw new Error("Lỗi kết nối");
+        let errorDetail = `Mã phản hồi HTTP ${response.status}`;
+        try {
+          const errData = await response.json();
+          if (errData?.error) errorDetail = errData.error;
+        } catch {
+          // Phản hồi không phải json (ví dụ lỗi mạng hoặc 500 html)
+        }
+        throw new Error(errorDetail);
       }
 
       const data: GeminiCardSuggestion = await response.json();
       setAiSuggestion(data);
 
-      // Pre-fill teacher form for review and modification
+      // Điền sẵn vào form để giáo viên duyệt và chỉnh sửa nếu cần
       setInputTitle(aiProgramQuery.trim());
       if (data.nhom === "Tin tức" || data.nhom === "Giải trí" || data.nhom === "Giáo dục") {
         setInputCategory(data.nhom);
       }
       setInputDescription(data.mo_ta || "");
       setInputExplanation(data.giai_thich || "");
-    } catch {
+    } catch (err: any) {
+      console.error("[Góc cô giáo] Chi tiết lỗi khi nhờ Gemini gợi ý thẻ:", err);
       setAiError("Chưa nhờ được Gemini. Cô có thể tự nhập thẻ.");
     } finally {
       setIsLoadingAi(false);
