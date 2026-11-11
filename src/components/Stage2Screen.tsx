@@ -17,6 +17,7 @@ interface Stage2ScreenProps {
   scenarios: SafetyScenario[];
   currentScenarioIndex: number;
   currentGroupNumber: number;
+  currentMemberNumber: number;
   onAnswer: (isCorrect: boolean, selectedAnswer: SafetyAnswer, scenario: SafetyScenario) => void;
   onNextScenario: () => void;
   isLastScenario: boolean;
@@ -27,6 +28,7 @@ export const Stage2Screen: React.FC<Stage2ScreenProps> = ({
   scenarios,
   currentScenarioIndex,
   currentGroupNumber,
+  currentMemberNumber,
   onAnswer,
   onNextScenario,
   isLastScenario,
@@ -82,7 +84,7 @@ export const Stage2Screen: React.FC<Stage2ScreenProps> = ({
             <Users className="w-5 h-5" />
           </div>
           <span className="text-xl sm:text-2xl font-black text-[#064e3b]">
-            Lượt: <span className="text-[#0284c7] underline">Nhóm {currentGroupNumber}</span> lên bấm
+            Lượt: <span className="text-[#0284c7] underline">Nhóm {currentGroupNumber}, bạn số {currentMemberNumber}</span> lên bấm
           </span>
           <span className="text-sm font-bold text-[#047857] ml-2 hidden sm:inline">
             (Tình huống {currentScenarioIndex + 1}/{scenarios.length})
@@ -108,6 +110,13 @@ export const Stage2Screen: React.FC<Stage2ScreenProps> = ({
             </span>
           </div>
         )}
+      </div>
+
+      {/* Reminder prompt banner for 4 groups: "Giơ thẻ xanh lá nếu xem tiếp, giơ thẻ đỏ nếu dừng lại" */}
+      <div className="bg-[#f0fdf4] border-2 border-[#86efac] text-[#065f46] px-4 py-2 rounded-2xl mb-2 text-center shadow-sm">
+        <p className="text-base sm:text-lg font-black">
+          📢 Nhắc cả lớp: <span className="text-[#16a34a] underline">Giơ thẻ xanh lá</span> nếu xem tiếp, <span className="text-[#dc2626] underline">giơ thẻ đỏ</span> nếu dừng lại!
+        </p>
       </div>
 
       {/* Main Workspace: Left is TV Chassis with Situation, Right is 2 Big Decision Buttons */}

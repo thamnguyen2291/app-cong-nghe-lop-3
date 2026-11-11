@@ -10,6 +10,7 @@ interface HeaderNavProps {
   onToggleMute: () => void;
   onOpenToc: () => void;
   currentSpeechText: string;
+  onBackToModeSelect: () => void;
 }
 
 export const HeaderNav: React.FC<HeaderNavProps> = ({
@@ -19,6 +20,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   onToggleMute,
   onOpenToc,
   currentSpeechText,
+  onBackToModeSelect,
 }) => {
   const [hasVoice, setHasVoice] = React.useState<boolean>(speechManager.hasVoice);
   const [isSpeaking, setIsSpeaking] = React.useState<boolean>(speechManager.isSpeaking);
@@ -107,6 +109,15 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
                   <span className="hidden md:inline">Tắt tiếng</span>
                 </>
               )}
+            </button>
+
+            {/* Back to mode selection button */}
+            <button
+              onClick={onBackToModeSelect}
+              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-[#134237] hover:bg-[#1a5547] text-[#5eead4] border border-[#226354] active:scale-95 transition-all cursor-pointer"
+              title="Quay lại trang chọn chế độ"
+            >
+              <span>Đổi chế độ</span>
             </button>
           </div>
         </div>

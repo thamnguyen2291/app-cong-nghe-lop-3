@@ -22,6 +22,7 @@ interface SummaryScreenProps {
   stage2Total: number;
   incorrectCards: string[];
   onPlayAgain: () => void;
+  onBackToModeSelect: () => void;
 }
 
 export const SummaryScreen: React.FC<SummaryScreenProps> = ({
@@ -32,6 +33,7 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
   stage2Total,
   incorrectCards,
   onPlayAgain,
+  onBackToModeSelect,
 }) => {
   const [aiComment, setAiComment] = useState<string | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
@@ -44,12 +46,16 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
 
   let evaluationLevel = "Hoàn thành tốt";
   let evaluationColor = "bg-[#dcfce7] border-[#22c55e] text-[#15803d]";
+  let summaryTitle = "Chúc mừng cả lớp đã hoàn thành xuất sắc!";
+
   if (accuracyPercent < 50) {
     evaluationLevel = "Cần nhắc lại";
     evaluationColor = "bg-[#fee2e2] border-[#ef4444] text-[#b91c1c]";
+    summaryTitle = "Cả lớp cùng ôn lại nhé!";
   } else if (accuracyPercent < 80) {
     evaluationLevel = "Hoàn thành";
     evaluationColor = "bg-[#fef9c3] border-[#eab308] text-[#854d0e]";
+    summaryTitle = "Cả lớp đã hoàn thành nhiệm vụ!";
   }
 
   useEffect(() => {
@@ -114,7 +120,7 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
           <span>Tổng kết hoạt động: Mắt Sáng Chọn Hay</span>
         </div>
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#072d24]">
-          Chúc mừng cả lớp đã hoàn thành xuất sắc!
+          {summaryTitle}
         </h1>
       </div>
 
@@ -254,14 +260,24 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({
         </div>
       </div>
 
-      {/* Bottom Button: Play Again */}
-      <div className="flex justify-center mt-3">
+      {/* Bottom Buttons: Play Again & Back to Mode Select */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-3">
+        <button
+          onClick={() => {
+            soundManager.playClick();
+            onBackToModeSelect();
+          }}
+          className="w-full sm:w-auto py-3 px-6 rounded-2xl bg-white border-2 border-gray-300 hover:bg-gray-100 text-gray-700 font-bold text-lg shadow-sm transition-all active:scale-95 cursor-pointer"
+        >
+          Về trang chọn chế độ
+        </button>
+
         <button
           onClick={() => {
             soundManager.playClick();
             onPlayAgain();
           }}
-          className="py-3.5 px-8 rounded-2xl bg-gradient-to-r from-[#0d9488] to-[#059669] hover:from-[#0f766e] hover:to-[#047857] text-white font-black text-2xl shadow-xl flex items-center gap-3 active:scale-95 transition-all cursor-pointer"
+          className="w-full sm:w-auto py-3.5 px-8 rounded-2xl bg-gradient-to-r from-[#0d9488] to-[#059669] hover:from-[#0f766e] hover:to-[#047857] text-white font-black text-2xl shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all cursor-pointer"
         >
           <RotateCcw className="w-7 h-7" />
           <span>Chơi lại</span>

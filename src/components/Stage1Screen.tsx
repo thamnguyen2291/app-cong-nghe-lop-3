@@ -17,6 +17,7 @@ interface Stage1ScreenProps {
   cards: ProgramCard[];
   currentCardIndex: number;
   currentGroupNumber: number;
+  currentMemberNumber: number;
   onAnswer: (isCorrect: boolean, selectedCategory: ProgramCategory, card: ProgramCard) => void;
   onNextCard: () => void;
   isLastCard: boolean;
@@ -27,6 +28,7 @@ export const Stage1Screen: React.FC<Stage1ScreenProps> = ({
   cards,
   currentCardIndex,
   currentGroupNumber,
+  currentMemberNumber,
   onAnswer,
   onNextCard,
   isLastCard,
@@ -115,7 +117,7 @@ export const Stage1Screen: React.FC<Stage1ScreenProps> = ({
             <Users className="w-5 h-5" />
           </div>
           <span className="text-xl sm:text-2xl font-black text-[#064e3b]">
-            Lượt: <span className="text-[#0284c7] underline">Nhóm {currentGroupNumber}</span> lên bấm
+            Lượt: <span className="text-[#0284c7] underline">Nhóm {currentGroupNumber}, bạn số {currentMemberNumber}</span> lên bấm
           </span>
           <span className="text-sm font-bold text-[#047857] ml-2 hidden sm:inline">
             (Kênh {currentCardIndex + 1}/{cards.length})

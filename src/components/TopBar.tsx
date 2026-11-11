@@ -20,6 +20,7 @@ interface TopBarProps {
   onTogglePause: () => void;
   onToggleMute: () => void;
   onGoToStage: (stage: AppStage) => void;
+  onBackToModeSelect: () => void;
 }
 
 const STAGES: { key: AppStage; label: string; stepNumber: number }[] = [
@@ -37,6 +38,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   isMuted,
   onTogglePause,
   onToggleMute,
+  onBackToModeSelect,
 }) => {
   const formatTime = (totalSec: number) => {
     const mins = Math.floor(totalSec / 60);
@@ -156,20 +158,29 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* Mute / Unmute Button */}
           <button
             onClick={onToggleMute}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold bg-[#134237] text-[#99f6e4] border border-[#226354] hover:bg-[#1a5547] active:scale-95 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold bg-[#134237] text-[#99f6e4] border border-[#226354] hover:bg-[#1a5547] active:scale-95 transition-colors cursor-pointer"
             aria-label={isMuted ? "Bật tiếng" : "Tắt tiếng"}
           >
             {isMuted ? (
               <>
                 <VolumeX className="w-4 h-4 text-red-400" />
-                <span className="hidden sm:inline">Bật tiếng</span>
+                <span className="hidden md:inline">Bật tiếng</span>
               </>
             ) : (
               <>
                 <Volume2 className="w-4 h-4 text-[#34d399]" />
-                <span className="hidden sm:inline">Tắt tiếng</span>
+                <span className="hidden md:inline">Tắt tiếng</span>
               </>
             )}
+          </button>
+
+          {/* Back to mode selection button */}
+          <button
+            onClick={onBackToModeSelect}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-[#134237] hover:bg-[#1a5547] text-[#5eead4] border border-[#226354] active:scale-95 transition-colors cursor-pointer"
+            title="Quay lại trang chọn chế độ"
+          >
+            <span>Đổi chế độ</span>
           </button>
         </div>
       </div>
