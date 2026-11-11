@@ -1,83 +1,69 @@
 import { useState, useEffect } from "react";
-import { AppStage, ProgramCard, ProgramCategory, SafetyAnswer, SafetyScenario } from "./types";
-import { DEFAULT_STAGE1_CARDS, DEFAULT_STAGE2_SCENARIOS } from "./data/defaultCards";
+import {
+  SectionId,
+  ElearningProgress,
+  ProgramCategory,
+  SafetyAnswer,
+} from "./types/elearning";
 import { soundManager } from "./utils/audio";
-import { TopBar } from "./components/TopBar";
-import { StartScreen } from "./components/StartScreen";
-import { Stage1Screen } from "./components/Stage1Screen";
-import { Stage2Screen } from "./components/Stage2Screen";
-import { Stage3Screen } from "./components/Stage3Screen";
-import { SummaryScreen } from "./components/SummaryScreen";
-import { TeacherCornerModal } from "./components/TeacherCornerModal";
+import { speechManager } from "./utils/speech";
+import { HeaderNav } from "./components/layout/HeaderNav";
+import { FooterNav } from "./components/layout/FooterNav";
+import { TableOfContentsModal } from "./components/layout/TableOfContentsModal";
+import { Section1Cover } from "./components/sections/Section1Cover";
+import { Section2Objectives } from "./components/sections/Section2Objectives";
+import { Section3Warmup } from "./components/sections/Section3Warmup";
+import { Section4Explore } from "./components/sections/Section4Explore";
+import { Section5Practice } from "./components/sections/Section5Practice";
+import { Section6Apply } from "./components/sections/Section6Apply";
+import { Section7QuizSummary } from "./components/sections/Section7QuizSummary";
 
-const LOCAL_STORAGE_KEY_CARDS = "mat_sang_chon_hay_cards_v1";
+const STORAGE_KEY = "elearning_mat_sang_progress_v1";
+
+const DEFAULT_PROGRESS: ElearningProgress = {
+  currentSection: 1,
+  maxUnlockedSection: 1,
+  practiceStars: 0,
+  stage1Completed: {},
+  stage2Completed: {},
+  pledgeResult: null,
+  applyAnswers: {
+    familyUses: [],
+    chosenHealthyProgram: "",
+  },
+  quizAnswers: {},
+  quizSubmitted: false,
+};
 
 export default function App() {
-  // Navigation & Game Stage
-  const [currentStage, setCurrentStage] = useState<AppStage>("start");
-  const [isTeacherCornerOpen, setIsTeacherCornerOpen] = useState<boolean>(false);
-
-  // Group rotation settings
-  const [groupCount, setGroupCount] = useState<number>(8);
-  const [currentGroupTurn, setCurrentGroupTurn] = useState<number>(1);
-
-  // Lesson Activity Timer (target 10:00)
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
-  const [isPaused, setIsPaused] = useState<boolean>(false);
-  const [isMuted, setIsMuted] = useState<boolean>(false);
-
-  // Stage 1: Program Cards (customizable in Teacher Corner)
-  const [cards, setCards] = useState<ProgramCard[]>(() => {
+  const [progress, setProgress] = useState<ElearningProgress>(() => {
     try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY_CARDS);
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length >= 3) {
+        if (parsed && typeof parsed.currentSection === "number") {
           return parsed;
         }
       }
     } catch {}
-    return DEFAULT_STAGE1_CARDS;
+    return DEFAULT_PROGRESS;
   });
 
-  const [stage1Index, setStage1Index] = useState<number>(0);
+  const [isTocOpen, setIsTocOpen] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
 
-  // Stage 2: Digital Safety Scenarios
-  const scenarios = DEFAULT_STAGE2_SCENARIOS;
-  const [stage2Index, setStage2Index] = useState<number>(0);
-
-  // Stage 3 Pledge Result
-  const [, setPledgeResult] = useState<{
-    program: string;
-    reason: string;
-  } | null>(null);
-
-  // Score & Evaluation tracking
-  const [stars, setStars] = useState<number>(0);
-  const [stage1Correct, setStage1Correct] = useState<number>(0);
-  const [stage2Correct, setStage2Correct] = useState<number>(0);
-  const [incorrectItems, setIncorrectItems] = useState<string[]>([]);
-
-  // Save cards to localStorage whenever modified
-  const handleSaveCards = (newCards: ProgramCard[]) => {
-    setCards(newCards);
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY_CARDS, JSON.stringify(newCards));
-    } catch {}
-  };
-
-  // Timer effect: runs during active stages (stage1, stage2, stage3)
+  // Save progress to localStorage
   useEffect(() => {
-    if (currentStage === "start" || isPaused) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    } catch {}
+  }, [progress]);
 
-    const interval = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
+  // Stop speech when switching sections
+  useEffect(() => {
+    speechManager.stop();
+  }, [progress.currentSection]);
 
-    return () => clearInterval(interval);
-  }, [currentStage, isPaused]);
-
-  // Audio mute sync
   const handleToggleMute = () => {
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
@@ -87,176 +73,226 @@ export default function App() {
     }
   };
 
-  const handleTogglePause = () => {
-    soundManager.playClick();
-    setIsPaused((prev) => !prev);
+  const handleSelectSection = (id: SectionId) => {
+    setProgress((prev) => ({
+      ...prev,
+      currentSection: id,
+      maxUnlockedSection: Math.max(prev.maxUnlockedSection, id) as SectionId,
+    }));
   };
 
-  // Start activity
-  const handleStartGame = () => {
-    setCurrentStage("stage1");
-    setStage1Index(0);
-    setStage2Index(0);
-    setCurrentGroupTurn(1);
-    setStars(0);
-    setStage1Correct(0);
-    setStage2Correct(0);
-    setIncorrectItems([]);
-    setPledgeResult(null);
-    setElapsedSeconds(0);
-    setIsPaused(false);
-  };
-
-  // Stage 1 Answer
-  const handleStage1Answer = (isCorrect: boolean, _category: ProgramCategory, card: ProgramCard) => {
-    if (isCorrect) {
-      setStars((prev) => prev + 1);
-      setStage1Correct((prev) => prev + 1);
-    } else {
-      setIncorrectItems((prev) =>
-        prev.includes(card.ten) ? prev : [...prev, `Kênh "${card.ten}" (Đáp án đúng: ${card.nhom})`]
-      );
+  const handleGoNext = () => {
+    if (progress.currentSection < 7) {
+      const nextId = (progress.currentSection + 1) as SectionId;
+      handleSelectSection(nextId);
     }
   };
 
-  // Stage 1 Next Card
-  const handleStage1Next = () => {
-    const nextTurn = (currentGroupTurn % groupCount) + 1;
-    setCurrentGroupTurn(nextTurn);
-
-    if (stage1Index + 1 < cards.length) {
-      setStage1Index((prev) => prev + 1);
-    } else {
-      // Transition to Stage 2
-      soundManager.playFanfare();
-      setCurrentStage("stage2");
-      setStage2Index(0);
+  const handleGoBack = () => {
+    if (progress.currentSection > 1) {
+      const prevId = (progress.currentSection - 1) as SectionId;
+      handleSelectSection(prevId);
     }
   };
 
-  // Stage 2 Answer
-  const handleStage2Answer = (
-    isCorrect: boolean,
-    _answer: SafetyAnswer,
-    scenario: SafetyScenario
+  // Section 5 practice stage 1 update
+  const handleUpdateStage1 = (
+    cardId: string,
+    selected: ProgramCategory,
+    isCorrect: boolean
   ) => {
-    if (isCorrect) {
-      setStars((prev) => prev + 1);
-      setStage2Correct((prev) => prev + 1);
-    } else {
-      const correctLabel = scenario.dap_an === "Dừng" ? "Dừng lại, báo người lớn" : "Xem tiếp";
-      setIncorrectItems((prev) =>
-        prev.includes(scenario.ten)
-          ? prev
-          : [...prev, `Tình huống "${scenario.ten}" (Cách xử lý đúng: ${correctLabel})`]
-      );
+    setProgress((prev) => {
+      if (prev.stage1Completed[cardId]) return prev;
+      const newStage1 = {
+        ...prev.stage1Completed,
+        [cardId]: { selected, isCorrect },
+      };
+      const newStars = prev.practiceStars + (isCorrect ? 1 : 0);
+      return {
+        ...prev,
+        stage1Completed: newStage1,
+        practiceStars: newStars,
+      };
+    });
+  };
+
+  // Section 5 practice stage 2 update
+  const handleUpdateStage2 = (
+    scenarioId: string,
+    selected: SafetyAnswer,
+    isCorrect: boolean
+  ) => {
+    setProgress((prev) => {
+      if (prev.stage2Completed[scenarioId]) return prev;
+      const newStage2 = {
+        ...prev.stage2Completed,
+        [scenarioId]: { selected, isCorrect },
+      };
+      const newStars = prev.practiceStars + (isCorrect ? 1 : 0);
+      return {
+        ...prev,
+        stage2Completed: newStage2,
+        practiceStars: newStars,
+      };
+    });
+  };
+
+  // Section 5 practice stage 3 pledge update
+  const handleUpdatePledge = (program: string, reason: string) => {
+    setProgress((prev) => ({
+      ...prev,
+      pledgeResult: { program, reason },
+    }));
+  };
+
+  // Section 6 apply updates
+  const handleToggleFamilyUse = (item: string) => {
+    setProgress((prev) => {
+      const exists = prev.applyAnswers.familyUses.includes(item);
+      const updated = exists
+        ? prev.applyAnswers.familyUses.filter((x) => x !== item)
+        : [...prev.applyAnswers.familyUses, item];
+      return {
+        ...prev,
+        applyAnswers: {
+          ...prev.applyAnswers,
+          familyUses: updated,
+        },
+      };
+    });
+  };
+
+  const handleSelectHealthyProgram = (item: string) => {
+    setProgress((prev) => ({
+      ...prev,
+      applyAnswers: {
+        ...prev.applyAnswers,
+        chosenHealthyProgram: item,
+      },
+    }));
+  };
+
+  // Section 7 quiz updates
+  const handleAnswerQuizQuestion = (questionId: number, optionIdx: number) => {
+    setProgress((prev) => ({
+      ...prev,
+      quizAnswers: {
+        ...prev.quizAnswers,
+        [questionId]: optionIdx,
+      },
+    }));
+  };
+
+  const handleSubmitQuiz = () => {
+    setProgress((prev) => ({
+      ...prev,
+      quizSubmitted: true,
+    }));
+  };
+
+  // Restart all progress
+  const handleRestartAll = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    setProgress(DEFAULT_PROGRESS);
+  };
+
+  // Get current section speech narration text for Header "Nghe lại"
+  const getCurrentSpeechText = () => {
+    switch (progress.currentSection) {
+      case 1:
+        return "Chào các em! Hôm nay chúng mình cùng tìm hiểu về chiếc ti vi nhé!";
+      case 2:
+        return "Sau bài học này, các em sẽ đạt được 3 mục tiêu rất quan trọng này nhé!";
+      case 3:
+        return "Em thích chương trình truyền hình nào? Hãy bấm chọn một bức tranh nhé!";
+      case 4:
+        return "Máy thu hình, còn gọi là ti vi, dùng để xem các chương trình truyền hình. Nội dung thường là tin tức, giải trí và giáo dục.";
+      case 5:
+        return "Chúng mình cùng luyện tập 3 chặng để nhận thật nhiều ngôi sao nhé!";
+      case 6:
+        return "Ở nhà em và bố mẹ cùng xem ti vi như thế nào? Hãy cùng trao đổi và chia sẻ nhé!";
+      case 7:
+        return "Ti vi giúp em xem tin tức, giải trí và học tập. Em chọn nội dung đúng lứa tuổi, xem cùng người lớn. Gặp nội dung lạ, em dừng lại và báo người lớn.";
+      default:
+        return "";
     }
-  };
-
-  // Stage 2 Next Scenario
-  const handleStage2Next = () => {
-    const nextTurn = (currentGroupTurn % groupCount) + 1;
-    setCurrentGroupTurn(nextTurn);
-
-    if (stage2Index + 1 < scenarios.length) {
-      setStage2Index((prev) => prev + 1);
-    } else {
-      // Transition to Stage 3
-      soundManager.playFanfare();
-      setCurrentStage("stage3");
-    }
-  };
-
-  // Stage 3 Pledge Completion
-  const handleStage3Pledge = (selectedProgram: string, selectedReason: string) => {
-    setPledgeResult({ program: selectedProgram, reason: selectedReason });
-    setStars((prev) => prev + 1); // bonus star for complete pledge
-  };
-
-  const handleStage3GoToSummary = () => {
-    setCurrentStage("summary");
-  };
-
-  // Reset & Play Again
-  const handlePlayAgain = () => {
-    handleStartGame();
   };
 
   return (
-    <div className="min-h-screen bg-[#ecf8f4] flex flex-col text-[#0b2b24] select-none font-sans">
-      {/* Top Bar (always present) */}
-      <TopBar
-        currentStage={currentStage}
-        stars={stars}
-        elapsedSeconds={elapsedSeconds}
-        isPaused={isPaused}
+    <div className="min-h-screen bg-[#ecf8f4] flex flex-col text-[#0b2b24] font-sans">
+      {/* Top Header Navigation */}
+      <HeaderNav
+        currentSection={progress.currentSection}
+        maxUnlockedSection={progress.maxUnlockedSection}
         isMuted={isMuted}
-        onTogglePause={handleTogglePause}
         onToggleMute={handleToggleMute}
-        onGoToStage={(stage) => setCurrentStage(stage)}
+        onOpenToc={() => setIsTocOpen(true)}
+        currentSpeechText={getCurrentSpeechText()}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
-        {currentStage === "start" && (
-          <StartScreen
-            groupCount={groupCount}
-            onGroupCountChange={(count) => setGroupCount(count)}
-            onStartGame={handleStartGame}
-            onOpenTeacherCorner={() => setIsTeacherCornerOpen(true)}
+      {/* Main Content Sections (1 to 7) */}
+      <main className="flex-1 flex flex-col">
+        {progress.currentSection === 1 && (
+          <Section1Cover onStart={handleGoNext} />
+        )}
+
+        {progress.currentSection === 2 && <Section2Objectives />}
+
+        {progress.currentSection === 3 && <Section3Warmup />}
+
+        {progress.currentSection === 4 && <Section4Explore />}
+
+        {progress.currentSection === 5 && (
+          <Section5Practice
+            practiceStars={progress.practiceStars}
+            stage1Completed={progress.stage1Completed}
+            stage2Completed={progress.stage2Completed}
+            pledgeResult={progress.pledgeResult}
+            onUpdateStage1={handleUpdateStage1}
+            onUpdateStage2={handleUpdateStage2}
+            onUpdatePledge={handleUpdatePledge}
           />
         )}
 
-        {currentStage === "stage1" && (
-          <Stage1Screen
-            cards={cards}
-            currentCardIndex={stage1Index}
-            currentGroupNumber={currentGroupTurn}
-            onAnswer={handleStage1Answer}
-            onNextCard={handleStage1Next}
-            isLastCard={stage1Index + 1 >= cards.length}
-            isPaused={isPaused}
+        {progress.currentSection === 6 && (
+          <Section6Apply
+            familyUses={progress.applyAnswers.familyUses}
+            chosenHealthyProgram={progress.applyAnswers.chosenHealthyProgram}
+            onToggleFamilyUse={handleToggleFamilyUse}
+            onSelectHealthyProgram={handleSelectHealthyProgram}
           />
         )}
 
-        {currentStage === "stage2" && (
-          <Stage2Screen
-            scenarios={scenarios}
-            currentScenarioIndex={stage2Index}
-            currentGroupNumber={currentGroupTurn}
-            onAnswer={handleStage2Answer}
-            onNextScenario={handleStage2Next}
-            isLastScenario={stage2Index + 1 >= scenarios.length}
-            isPaused={isPaused}
+        {progress.currentSection === 7 && (
+          <Section7QuizSummary
+            practiceStars={progress.practiceStars}
+            quizAnswers={progress.quizAnswers}
+            quizSubmitted={progress.quizSubmitted}
+            onAnswerQuestion={handleAnswerQuizQuestion}
+            onSubmitQuiz={handleSubmitQuiz}
+            onGoToExplore={() => handleSelectSection(4)}
+            onRestartAll={handleRestartAll}
           />
         )}
+      </main>
 
-        {currentStage === "stage3" && (
-          <Stage3Screen
-            onCompletePledge={handleStage3Pledge}
-            onGoToSummary={handleStage3GoToSummary}
-          />
-        )}
+      {/* Bottom Footer Navigation */}
+      <FooterNav
+        currentSection={progress.currentSection}
+        onGoBack={handleGoBack}
+        onGoNext={handleGoNext}
+        onOpenToc={() => setIsTocOpen(true)}
+      />
 
-        {currentStage === "summary" && (
-          <SummaryScreen
-            totalStars={stars}
-            stage1Correct={stage1Correct}
-            stage1Total={cards.length}
-            stage2Correct={stage2Correct}
-            stage2Total={scenarios.length}
-            incorrectCards={incorrectItems}
-            onPlayAgain={handlePlayAgain}
-          />
-        )}
-      </div>
-
-      {/* Teacher Corner Modal (only accessible from Start screen) */}
-      {isTeacherCornerOpen && (
-        <TeacherCornerModal
-          cards={cards}
-          onSaveCards={handleSaveCards}
-          onClose={() => setIsTeacherCornerOpen(false)}
+      {/* Table of Contents Modal */}
+      {isTocOpen && (
+        <TableOfContentsModal
+          currentSection={progress.currentSection}
+          maxUnlockedSection={progress.maxUnlockedSection}
+          onSelectSection={handleSelectSection}
+          onClose={() => setIsTocOpen(false)}
         />
       )}
     </div>
